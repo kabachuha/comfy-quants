@@ -26,6 +26,8 @@ _HIDDEN = 4096           # model_dim
 _TEXT_BLOCKS = 4         # num_text_blocks
 _VISUAL_BLOCKS = 60      # num_visual_blocks
 _FF_DIM = 16384          # ff_dim (feed_forward hidden size)
+_OL_DIM = 36864          # ol_dim (outlayer)
+_EXIT_DIM = 1024          # exit_dim (final dim)
 _VISUAL_EMBED_DIM = 132  # visual_embed_dim
 
 
@@ -33,6 +35,8 @@ def _dims() -> dict[str, int]:
     return {
         "H": _HIDDEN,
         "FF": _FF_DIM,
+        "OL": _OL_DIM,
+        "EXIT": _EXIT_DIM,
         "VIS_EMBED": _VISUAL_EMBED_DIM,
         "TEXT_B": _TEXT_BLOCKS,
         "VIS_B": _VISUAL_BLOCKS,
@@ -68,7 +72,7 @@ def _visual_block_modules() -> tuple:
         linear(f"{p}.self_attention.to_value", "H", "H"),
         linear(f"{p}.self_attention.out_layer", "H", "H"),
         # Visual Modulation
-        linear(f"{p}.visual_modulation.out_layer", "FF", "H"),
+        linear(f"{p}.visual_modulation.out_layer", "OL", "EXIT"),
     )
 
 
