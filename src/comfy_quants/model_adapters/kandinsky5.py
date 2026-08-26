@@ -42,18 +42,33 @@ def _dims() -> dict[str, int]:
 def _text_block_modules() -> tuple:
     p = "text_transformer_blocks.{block}"
     return (
-        linear(f"{p}.feed_forward", "FF", "H"),
-        linear(f"{p}.self_attention", "H", "H"),
+        linear(f"{p}.feed_forward.in_layer", "FF", "H"),
+        linear(f"{p}.feed_forward.out_layer", "H", "FF"),
+        linear(f"{p}.self_attention.to_key", "H", "H"),
+        linear(f"{p}.self_attention.to_query", "H", "H"),
+        linear(f"{p}.self_attention.to_value", "H", "H"),
+        linear(f"{p}.self_attention.out_layer", "H", "H"),
     )
 
 
 def _visual_block_modules() -> tuple:
     p = "visual_transformer_blocks.{block}"
     return (
-        linear(f"{p}.cross_attention", "H", "H"),
-        linear(f"{p}.feed_forward", "FF", "H"),
-        linear(f"{p}.self_attention", "H", "H"),
-        linear(f"{p}.visual_modulation", "FF", "H"), 
+        # Cross Attention
+        linear(f"{p}.cross_attention.to_key", "H", "H"),
+        linear(f"{p}.cross_attention.to_query", "H", "H"),
+        linear(f"{p}.cross_attention.to_value", "H", "H"),
+        linear(f"{p}.cross_attention.out_layer", "H", "H"),
+        # Feed Forward
+        linear(f"{p}.feed_forward.in_layer", "FF", "H"),
+        linear(f"{p}.feed_forward.out_layer", "H", "FF"),
+        # Self Attention
+        linear(f"{p}.self_attention.to_key", "H", "H"),
+        linear(f"{p}.self_attention.to_query", "H", "H"),
+        linear(f"{p}.self_attention.to_value", "H", "H"),
+        linear(f"{p}.self_attention.out_layer", "H", "H"),
+        # Visual Modulation
+        linear(f"{p}.visual_modulation.out_layer", "FF", "H"),
     )
 
 
