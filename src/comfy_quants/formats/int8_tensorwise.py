@@ -62,6 +62,7 @@ INT8_TENSORWISE_FORMAT = QuantFormatSpec(
         "anima_14b",
         "flux",
         "flux2",
+        "kandinsky5",
         "ltxv",
         "ltx2",
         "ideogram4",

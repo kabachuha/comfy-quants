@@ -92,6 +92,15 @@ _STOCK_DIT_CONTRACTS: dict[str, dict[str, Any]] = {
         "model_contract_schema": "flux2_static_contract.v1",
         "owner_module": "comfy_quants.model_adapters.flux2",
     },
+    "kandinsky5": {
+        "schema_version": "kandinsky5_contract.v1",
+        "family": "kandinsky5",
+        "artifact_target": "comfyui",
+        "export_name": "Kandinsky5",
+        "consumer_layout": "ComfyUI kandinsky5",
+        "model_contract_schema": "kandinsky5_static_contract.v1",
+        "owner_module": "comfy_quants.model_adapters.kandinsky5",
+    },
     "ltxv": {
         "schema_version": "ltxv_contract.v1",
         "family": "ltxv",
