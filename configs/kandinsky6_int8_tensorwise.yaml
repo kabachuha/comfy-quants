@@ -1,0 +1,36 @@
+project:
+  name: kandinsky6-int8-tensorwise-v0
+  created_by: comfy_quants
+  seed: 42
+model:
+  family: kandinsky6
+  model_id: /media/kabachuha/maxx/K6/Kandinsky-6.0-Lite-5s.safetensors
+  revision: "<pin-this>"
+  dtype: bf16
+  source: local
+  trust_remote_code: false
+  components:
+    transformer: quantize
+    text_encoder: keep_bf16
+    vae: keep_bf16
+    audio_vae: keep_bf16
+quant:
+  algorithm: int8_tensorwise
+  target_dtype: int8_tensorwise
+  scale:
+    granularity: per_channel
+    axis: out_features
+    method: amax
+  rounding: nearest_even
+  modules:
+    include:
+      - "visual_transformer_blocks.*"
+      - "video_text_transformer_blocks.*"
+      - "audio_text_transformer_blocks.*"
+    exclude: []
+  fallback:
+    on_error: keep_bf16
+artifact:
+  format: safetensors_quant
+  compatibility_target: L2
+  write_module_reports: true

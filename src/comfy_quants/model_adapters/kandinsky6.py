@@ -93,54 +93,54 @@ def _model_dim_from_source(source: ModelSource) -> int | None:
 def _video_text_block_modules() -> tuple:
     p = "video_text_transformer_blocks.{block}"
     return (
-        linear(f"{p}.feed_forward.in_layer", "FF", "H"),
-        linear(f"{p}.feed_forward.out_layer", "H", "FF"),
-        linear(f"{p}.self_attention.to_query", "H", "H"),
-        linear(f"{p}.self_attention.to_key", "H", "H"),
-        linear(f"{p}.self_attention.to_value", "H", "H"),
-        linear(f"{p}.self_attention.out_layer", "H", "H"),
+        linear(f"{p}.feed_forward.net.0.proj", "FF", "H"),
+        linear(f"{p}.feed_forward.net.2", "H", "FF"),
+        linear(f"{p}.attn.to_query", "H", "H"),
+        linear(f"{p}.attn.to_key", "H", "H"),
+        linear(f"{p}.attn.to_value", "H", "H"),
+        linear(f"{p}.attn.out_layer", "H", "H"),
     )
 
 
 def _audio_text_block_modules() -> tuple:
     p = "audio_text_transformer_blocks.{block}"
     return (
-        linear(f"{p}.feed_forward.in_layer", "FFA", "HA"),
-        linear(f"{p}.feed_forward.out_layer", "HA", "FFA"),
-        linear(f"{p}.self_attention.to_query", "HA", "HA"),
-        linear(f"{p}.self_attention.to_key", "HA", "HA"),
-        linear(f"{p}.self_attention.to_value", "HA", "HA"),
-        linear(f"{p}.self_attention.out_layer", "HA", "HA"),
+        linear(f"{p}.feed_forward.net.0.proj", "FFA", "HA"),
+        linear(f"{p}.feed_forward.net.2", "HA", "FFA"),
+        linear(f"{p}.attn.to_query", "HA", "HA"),
+        linear(f"{p}.attn.to_key", "HA", "HA"),
+        linear(f"{p}.attn.to_value", "HA", "HA"),
+        linear(f"{p}.attn.out_layer", "HA", "HA"),
     )
 
 
 def _visual_block_modules() -> tuple:
-    p = "visual_blocks.{block}"
+    p = "visual_transformer_blocks.{block}"
     return (
         # video decoder
-        linear(f"{p}.videoT.self_attention.to_query", "H", "H"),
-        linear(f"{p}.videoT.self_attention.to_key", "H", "H"),
-        linear(f"{p}.videoT.self_attention.to_value", "H", "H"),
-        linear(f"{p}.videoT.self_attention.out_layer", "H", "H"),
-        linear(f"{p}.videoT.cross_attention.to_query", "H", "H"),
-        linear(f"{p}.videoT.cross_attention.to_key", "H", "H"),
-        linear(f"{p}.videoT.cross_attention.to_value", "H", "H"),
-        linear(f"{p}.videoT.cross_attention.out_layer", "H", "H"),
-        linear(f"{p}.videoT.feed_forward.in_layer", "FF", "H"),
-        linear(f"{p}.videoT.feed_forward.out_layer", "H", "FF"),
-        linear(f"{p}.videoT.visual_modulation.out_layer", "VIS_MOD", "TD"),
+        linear(f"{p}.video_dec_block.self_attention.to_query", "H", "H"),
+        linear(f"{p}.video_dec_block.self_attention.to_key", "H", "H"),
+        linear(f"{p}.video_dec_block.self_attention.to_value", "H", "H"),
+        linear(f"{p}.video_dec_block.self_attention.out_layer", "H", "H"),
+        linear(f"{p}.video_dec_block.cross_attention.to_query", "H", "H"),
+        linear(f"{p}.video_dec_block.cross_attention.to_key", "H", "H"),
+        linear(f"{p}.video_dec_block.cross_attention.to_value", "H", "H"),
+        linear(f"{p}.video_dec_block.cross_attention.out_layer", "H", "H"),
+        linear(f"{p}.video_dec_block.feed_forward.net.0.proj", "FF", "H"),
+        linear(f"{p}.video_dec_block.feed_forward.net.2", "H", "FF"),
+        linear(f"{p}.video_dec_block.visual_modulation.out_layer", "VIS_MOD", "TD"),
         # audio decoder
-        linear(f"{p}.audioT.self_attention.to_query", "HA", "HA"),
-        linear(f"{p}.audioT.self_attention.to_key", "HA", "HA"),
-        linear(f"{p}.audioT.self_attention.to_value", "HA", "HA"),
-        linear(f"{p}.audioT.self_attention.out_layer", "HA", "HA"),
-        linear(f"{p}.audioT.cross_attention.to_query", "HA", "HA"),
-        linear(f"{p}.audioT.cross_attention.to_key", "HA", "HA"),
-        linear(f"{p}.audioT.cross_attention.to_value", "HA", "HA"),
-        linear(f"{p}.audioT.cross_attention.out_layer", "HA", "HA"),
-        linear(f"{p}.audioT.feed_forward.in_layer", "FFA", "HA"),
-        linear(f"{p}.audioT.feed_forward.out_layer", "HA", "FFA"),
-        linear(f"{p}.audioT.visual_modulation.out_layer", "VIS_MOD_A", "TDA"),
+        linear(f"{p}.audio_dec_block.self_attention.to_query", "HA", "HA"),
+        linear(f"{p}.audio_dec_block.self_attention.to_key", "HA", "HA"),
+        linear(f"{p}.audio_dec_block.self_attention.to_value", "HA", "HA"),
+        linear(f"{p}.audio_dec_block.self_attention.out_layer", "HA", "HA"),
+        linear(f"{p}.audio_dec_block.cross_attention.to_query", "HA", "HA"),
+        linear(f"{p}.audio_dec_block.cross_attention.to_key", "HA", "HA"),
+        linear(f"{p}.audio_dec_block.cross_attention.to_value", "HA", "HA"),
+        linear(f"{p}.audio_dec_block.cross_attention.out_layer", "HA", "HA"),
+        linear(f"{p}.audio_dec_block.feed_forward.net.0.proj", "FFA", "HA"),
+        linear(f"{p}.audio_dec_block.feed_forward.net.2", "HA", "FFA"),
+        linear(f"{p}.audio_dec_block.visual_modulation.out_layer", "VIS_MOD_A", "TDA"),
         # video -> audio cross attention (query from video, key/value from audio)
         linear(f"{p}.va_cross_attention.to_query", "H", "H"),
         linear(f"{p}.va_cross_attention.to_key", "H", "HA"),
@@ -169,7 +169,7 @@ def _extra_components() -> tuple:
         kept_component("audio_time_embeddings", "MLPEmbedder", "transformer", "audio timestep embedding kept high precision"),
         kept_component("audio_text_embeddings", "Linear", "transformer", "audio text input projection kept high precision"),
         kept_component("audio_pooled_text_embeddings", "Linear", "transformer", "audio pooled text projection kept high precision"),
-        kept_component("audio_outLayer", "Linear", "transformer", "audio final layer kept high precision"),
+        kept_component("audio_out_layer", "Linear", "transformer", "audio final layer kept high precision"),
     )
 
 
@@ -183,7 +183,7 @@ def build_kandinsky6_static_contract(model_dim: int = _DEFAULT_MODEL_DIM) -> Sto
         block_groups=(
             BlockGroup(prefix="video_text_transformer_blocks", count=v["num_text_blocks"], modules=_video_text_block_modules()),
             BlockGroup(prefix="audio_text_transformer_blocks", count=v["num_text_blocks"], modules=_audio_text_block_modules()),
-            BlockGroup(prefix="visual_blocks", count=v["num_visual_blocks"], modules=_visual_block_modules()),
+            BlockGroup(prefix="visual_transformer_blocks", count=v["num_visual_blocks"], modules=_visual_block_modules()),
         ),
         extra_components=_extra_components(),
         metadata={
@@ -230,11 +230,11 @@ class Kandinsky6Adapter:
             include=[
                 "video_text_transformer_blocks.*",
                 "audio_text_transformer_blocks.*",
-                "visual_blocks.*",
+                "visual_transformer_blocks.*",
             ],
             exclude=[
-                "visual_blocks.*.va_cross_attention.*",
-                "visual_blocks.*.av_cross_attention.*",
+                "visual_transformer_blocks.*.va_cross_attention.*",
+                "visual_transformer_blocks.*.av_cross_attention.*",
             ] if mixed else [],
             keep_components=["visual_embeddings", "audio_embeddings"],
         )
