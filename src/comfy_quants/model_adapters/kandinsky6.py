@@ -9,6 +9,9 @@ Kandinsky 6 fuses one video and one audio transformer stream per block
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from comfy_quants.comfy.stock_dit_contract import stock_dit_artifact_contract_metadata
 from comfy_quants.core.policy import QuantPolicy
 from comfy_quants.model_adapters.base import ModelSource
@@ -23,30 +26,68 @@ from comfy_quants.model_adapters.stock_dit_contract import (
 
 CONTRACT_SCHEMA_VERSION = "kandinsky6_static_contract.v1"
 
-# Kandinsky 6 (Pro) architecture constants, from DIT_CONFIG / transformer_pro.
-_H = 4096            # model_dim (video)
-_HA = 2048           # model_dim_a (audio)
-_FF = 16384          # ff_dim (video)
-_FFA = 7168          # ff_dim_a (audio)
-_TD = 1024           # time_dim (video)
-_TDA = 1024          # time_dim_a (audio)
-_VIS_EMBED = 132     # visual_embed_dim = (2*16 + 1) * prod(patch_size=1,2,2)
-_VIS_MOD = 9 * _H    # videoT.visual_modulation out = 9 * model_dim
-_VIS_MOD_A = 9 * _HA  # audioT.visual_modulation out = 9 * model_dim_a
-_VA_MOD = 2 * _H + _HA  # va_modulation out (cross_gates) = 2*H + HA
-_AV_MOD = 2 * _HA + _H  # av_modulation out (cross_gates) = 2*HA + H
-_TEXT_B = 4          # num_text_blocks
-_VIS_B = 60          # num_visual_blocks
+# Dimensions shared by every released variant.
+_IN_VISUAL_DIM = 16   # in_visual_dim
+_PATCH_VOLUME = 4     # prod(patch_size=(1, 2, 2))
+
+# Variant tables keyed by model_dim, mirroring ComfyUI kandinsky6 detection
+# (``_RELEASE_DIT_CONFIGS``). Every field matches transformer_pro / transformer_lite.
+_VARIANTS: dict[int, dict[str, int]] = {
+    4096: {"model_dim": 4096, "model_dim_a": 2048, "ff_dim": 16384, "ff_dim_a": 7168,
+           "time_dim": 1024, "time_dim_a": 1024, "num_text_blocks": 4, "num_visual_blocks": 60},
+    1792: {"model_dim": 1792, "model_dim_a": 896, "ff_dim": 7168, "ff_dim_a": 3584,
+           "time_dim": 512, "time_dim_a": 512, "num_text_blocks": 2, "num_visual_blocks": 32},
+}
+_VARIANT_NAMES = {4096: "pro", 1792: "lite"}
+_DEFAULT_MODEL_DIM = 4096  # Pro
 
 
-def _dims() -> dict[str, int]:
+def _variant(model_dim: int) -> dict[str, int]:
+    return _VARIANTS.get(int(model_dim), _VARIANTS[_DEFAULT_MODEL_DIM])
+
+
+def _dims(model_dim: int) -> dict[str, int]:
+    v = _variant(model_dim)
+    h, ha = v["model_dim"], v["model_dim_a"]
     return {
-        "H": _H, "HA": _HA, "FF": _FF, "FFA": _FFA,
-        "TD": _TD, "TDA": _TDA, "VIS_EMBED": _VIS_EMBED,
-        "VIS_MOD": _VIS_MOD, "VIS_MOD_A": _VIS_MOD_A,
-        "VA_MOD": _VA_MOD, "AV_MOD": _AV_MOD,
-        "TEXT_B": _TEXT_B, "VIS_B": _VIS_B,
+        "H": h, "HA": ha, "FF": v["ff_dim"], "FFA": v["ff_dim_a"],
+        "TD": v["time_dim"], "TDA": v["time_dim_a"],
+        "VIS_EMBED": (2 * _IN_VISUAL_DIM + 1) * _PATCH_VOLUME,
+        "VIS_MOD": 9 * h,
+        "VIS_MOD_A": 9 * ha,
+        "VA_MOD": 2 * h + ha,
+        "AV_MOD": 2 * ha + h,
     }
+
+
+def _block_counts(model_dim: int) -> tuple[int, int]:
+    v = _variant(model_dim)
+    return v["num_text_blocks"], v["num_visual_blocks"]
+
+
+def _model_dim_from_source(source: ModelSource) -> int | None:
+    """Read model_dim from a local safetensors header, else None (Pro default).
+
+    The visual input projection's out_features equals model_dim. Only the
+    8-byte little-endian header length + JSON header are read (no tensor data,
+    no torch), so a single-file checkpoint is probed without loading weights.
+    """
+    path = Path(source.model_id)
+    if not path.is_file():
+        return None
+    try:
+        with path.open("rb") as handle:
+            header_len = int.from_bytes(handle.read(8), "little")
+            header = json.loads(handle.read(header_len))
+    except (OSError, ValueError):
+        return None
+    suffix = "visual_embeddings.in_layer.weight"
+    for name, info in header.items():
+        if name == suffix or name.endswith("." + suffix):
+            shape = (info or {}).get("shape") or []
+            if shape:
+                return int(shape[0])
+    return None
 
 
 def _video_text_block_modules() -> tuple:
@@ -132,27 +173,29 @@ def _extra_components() -> tuple:
     )
 
 
-def build_kandinsky6_static_contract() -> StockDitContract:
+def build_kandinsky6_static_contract(model_dim: int = _DEFAULT_MODEL_DIM) -> StockDitContract:
+    v = _variant(model_dim)
     return StockDitContract(
         family="kandinsky6",
         schema_version=CONTRACT_SCHEMA_VERSION,
         preferred_format="int8_tensorwise",
-        dims=_dims(),
+        dims=_dims(model_dim),
         block_groups=(
-            BlockGroup(prefix="video_text_transformer_blocks", count=_TEXT_B, modules=_video_text_block_modules()),
-            BlockGroup(prefix="audio_text_transformer_blocks", count=_TEXT_B, modules=_audio_text_block_modules()),
-            BlockGroup(prefix="visual_blocks", count=_VIS_B, modules=_visual_block_modules()),
+            BlockGroup(prefix="video_text_transformer_blocks", count=v["num_text_blocks"], modules=_video_text_block_modules()),
+            BlockGroup(prefix="audio_text_transformer_blocks", count=v["num_text_blocks"], modules=_audio_text_block_modules()),
+            BlockGroup(prefix="visual_blocks", count=v["num_visual_blocks"], modules=_visual_block_modules()),
         ),
         extra_components=_extra_components(),
         metadata={
             "export_name": "Kandinsky 6",
             "architecture": "fused_av_transformer",
-            "model_dim": _H,
-            "model_dim_a": _HA,
-            "num_text_blocks": _TEXT_B,
-            "num_visual_blocks": _VIS_B,
-            "ff_dim": _FF,
-            "ff_dim_a": _FFA,
+            "variant": _VARIANT_NAMES.get(int(model_dim), "pro"),
+            "model_dim": v["model_dim"],
+            "model_dim_a": v["model_dim_a"],
+            "num_text_blocks": v["num_text_blocks"],
+            "num_visual_blocks": v["num_visual_blocks"],
+            "ff_dim": v["ff_dim"],
+            "ff_dim_a": v["ff_dim_a"],
             "is_multimodal": True,
         },
     )
@@ -165,7 +208,8 @@ class Kandinsky6Adapter:
     supported_model_ids = ["kandinskylab/Kandinsky-6.0-Pro-5s-Diffusers"]
 
     def inspect(self, source: ModelSource):
-        contract = build_kandinsky6_static_contract()
+        model_dim = _model_dim_from_source(source) or _DEFAULT_MODEL_DIM
+        contract = build_kandinsky6_static_contract(model_dim)
         graph = build_stock_dit_graph(
             contract,
             source,
